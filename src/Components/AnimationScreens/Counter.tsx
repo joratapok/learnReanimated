@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     color: '#111',
   },
   counterContainer: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
   },
