@@ -1,3 +1,5 @@
+import {CheckIsAvailableTap, Coordinates} from 'types/types';
+
 export const findAvailableFields = (position: number, sizeField: number) => {
   const availableFields = [];
   const upCheck = () => {
@@ -50,4 +52,31 @@ export const findAvailableFields = (position: number, sizeField: number) => {
     availableFields.push(position + sizeField - 2);
   }
   return availableFields;
+};
+
+export const findCoordSquare = (
+  numSquare: number,
+  widthBoard: number,
+  boardSize: number,
+): Coordinates => {
+  const squareWidth = widthBoard / boardSize;
+  const x = (numSquare % boardSize) * squareWidth;
+  const y = Math.floor(numSquare / boardSize) * squareWidth;
+  return {x, y};
+};
+
+export const checkIsAvailableTap = ({
+  tap,
+  fieldWidth,
+  coordinates,
+}: CheckIsAvailableTap): boolean => {
+  'worklet';
+  const isAvailable = coordinates.find(el => {
+    const isX = tap.x > el.x && tap.x < el.x + fieldWidth;
+    const isY = tap.y > el.y && tap.y < el.y + fieldWidth;
+    if (isX && isY) {
+      return true;
+    }
+  });
+  return !!isAvailable;
 };

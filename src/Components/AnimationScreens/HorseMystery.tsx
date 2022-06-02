@@ -11,13 +11,27 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  Easing,
   interpolateColor,
+  useAnimatedGestureHandler,
   useAnimatedStyle,
   useDerivedValue,
+  useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
 // import {Colors} from 'react-native/Libraries/NewAppScreen';
-import {findAvailableFields} from 'helpers';
+import {
+  checkIsAvailableTap,
+  findAvailableFields,
+  findCoordSquare,
+} from 'helpers';
+import {
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
+  TapGestureHandler,
+  TapGestureHandlerGestureEvent,
+} from 'react-native-gesture-handler';
+import {Coordinates} from 'types/types';
 
 interface IRow {
   sizeField: number;
@@ -41,8 +55,13 @@ interface ISizeSetter {
 }
 type State = Array<StateCondition>;
 type StateCondition = '' | 'active' | 'isUsed';
+type ContextType = {
+  x: number;
+  y: number;
+};
 
-const {width: WIDTH} = Dimensions.get('window');
+const {width: WIDTH, height: HEIGHT} = Dimensions.get('window');
+const BOARD_WIDTH = WIDTH - 40;
 const sizes = [6, 8, 9, 10];
 
 const SizeSetter: React.FC<ISizeSetter> = ({size, changeSize}) => {
@@ -97,15 +116,9 @@ const Square: React.FC<ISquare> = React.memo(
           styles.square,
           {
             backgroundColor: background,
-            width: `${Math.floor(100 / sizeField)}%`,
+            width: `${100 / sizeField}%`,
           },
         ]}>
-        {condition === 'active' && (
-          <Image
-            source={require('../../assets/horse.png')}
-            style={styles.horse}
-          />
-        )}
         {isAvailable && !isUsed && <View style={styles.available} />}
         <Animated.View style={[styles.isUsed, rStyle]} />
       </Pressable>
@@ -150,14 +163,25 @@ export const HorseMystery = () => {
   //   backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   // };
   const [sizeField, setSizeField] = useState(8);
+  const SQUARE_WIDTH = BOARD_WIDTH / sizeField;
+  const HORSE_WIDTH = SQUARE_WIDTH - 5;
   const initialState: State = new Array(sizeField ** 2).fill('');
   const rows = new Array(sizeField).fill('');
   const [currentState, setCurrentState] = useState<State>(initialState);
   const [availableFields, setAvailableFields] = useState<Array<number>>([]);
+  const [coordinates, setCoordinates] = useState<Array<Coordinates>>([
+    {x: 0, y: 0},
+  ]);
   const counter = currentState.filter(el => el === 'isUsed').length + 1;
+  const horseX = useSharedValue(0);
+  const horseY = useSharedValue(0);
+
   const setup = useCallback(() => {
     setCurrentState(initialState);
-    moveHorse(sizeField * (sizeField - 1));
+    const horsePlace = sizeField * (sizeField - 1);
+    moveHorse(horsePlace);
+    horseX.value = withTiming(0);
+    horseY.value = withTiming(0);
   }, [sizeField]);
   const changeSize = useCallback(size => {
     setSizeField(size);
@@ -170,6 +194,73 @@ export const HorseMystery = () => {
       return newState;
     });
   }, []);
+
+  const tapGestureEvent =
+    useAnimatedGestureHandler<TapGestureHandlerGestureEvent>({
+      onStart: e => {
+        const tap = {x: e.x, y: e.y};
+        if (
+          !checkIsAvailableTap({tap, fieldWidth: SQUARE_WIDTH, coordinates})
+        ) {
+          return;
+        }
+        const compensationX = e.x % SQUARE_WIDTH;
+        const compensationY = (e.y % SQUARE_WIDTH) - SQUARE_WIDTH;
+        const easing = Easing.bezierFn(0.25, 1, 0.5, 1);
+        horseX.value = withTiming(e.x - compensationX, {easing});
+        horseY.value = withTiming(-(BOARD_WIDTH - e.y + compensationY), {
+          easing,
+        });
+      },
+    });
+
+  const panGestureEvent = useAnimatedGestureHandler<
+    PanGestureHandlerGestureEvent,
+    ContextType
+  >({
+    onStart: (event, context) => {
+      context.x = horseX.value;
+      context.y = horseY.value;
+    },
+    onActive: (event, context) => {
+      horseX.value = event.translationX + context.x;
+      horseY.value = event.translationY + context.y;
+    },
+    onEnd: (e, context) => {
+      const gap = HEIGHT / 2 - BOARD_WIDTH / 2;
+      const tap = {x: e.absoluteX - 20, y: e.absoluteY - gap};
+      if (
+        e.absoluteY < gap ||
+        e.absoluteY > gap + BOARD_WIDTH ||
+        e.absoluteX > BOARD_WIDTH + 20
+      ) {
+        horseX.value = withTiming(context.x);
+        horseY.value = withTiming(context.y);
+        return;
+      }
+      if (
+        !checkIsAvailableTap({tap, fieldWidth: SQUARE_WIDTH, coordinates})
+      ) {
+        horseX.value = withTiming(context.x);
+        horseY.value = withTiming(context.y);
+        return;
+      }
+      const x = e.absoluteX - 20;
+      const y = e.absoluteY - HEIGHT / 2 - BOARD_WIDTH / 2;
+      const compensationX = x % SQUARE_WIDTH;
+      const compensationY = y % SQUARE_WIDTH;
+      const config = {duration: 100};
+      horseX.value = withTiming(x - compensationX, config);
+      horseY.value = withTiming(y - compensationY, config);
+    },
+  });
+
+  const rHorse = useAnimatedStyle(() => {
+    return {
+      transform: [{translateX: horseX.value}, {translateY: horseY.value}],
+    };
+  }, []);
+
   //setup
   useEffect(() => {
     setup();
@@ -178,8 +269,12 @@ export const HorseMystery = () => {
   useEffect(() => {
     const currentPosition = currentState.indexOf('active');
     const fields = findAvailableFields(currentPosition, sizeField);
-    setAvailableFields(fields);
     const remain = fields.filter(el => currentState[el] !== 'isUsed');
+    const availableCoordinates = remain.map(el =>
+      findCoordSquare(el, BOARD_WIDTH, sizeField),
+    );
+    setCoordinates(availableCoordinates);
+    setAvailableFields(fields);
     if (!remain.length) {
       const title =
         counter !== sizeField ** 2
@@ -203,20 +298,35 @@ export const HorseMystery = () => {
       <TouchableOpacity onPress={setup} style={styles.buttonContainer}>
         <Text style={styles.buttonText}>сброс</Text>
       </TouchableOpacity>
-      <View style={styles.boardContainer}>
-        {rows.map((rowEl, rowIndex) => {
-          return (
-            <Row
-              key={rowIndex.toString()}
-              sizeField={sizeField}
-              rowIndex={rowIndex}
-              currentState={currentState}
-              availableFields={availableFields}
-              move={moveHorse}
-            />
-          );
-        })}
-      </View>
+
+      <TapGestureHandler numberOfTaps={1} onGestureEvent={tapGestureEvent}>
+        <Animated.View style={styles.boardContainer}>
+          <>
+            {rows.map((rowEl, rowIndex) => {
+              return (
+                <Row
+                  key={rowIndex.toString()}
+                  sizeField={sizeField}
+                  rowIndex={rowIndex}
+                  currentState={currentState}
+                  availableFields={availableFields}
+                  move={moveHorse}
+                />
+              );
+            })}
+            <PanGestureHandler onGestureEvent={panGestureEvent}>
+              <Animated.Image
+                source={require('../../assets/horse.png')}
+                style={[
+                  styles.horse,
+                  {width: HORSE_WIDTH, height: HORSE_WIDTH},
+                  rHorse,
+                ]}
+              />
+            </PanGestureHandler>
+          </>
+        </Animated.View>
+      </TapGestureHandler>
     </View>
   );
 };
@@ -232,7 +342,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     flexDirection: 'row',
     alignItems: 'flex-end',
-    transform: [{translateY: -WIDTH / 2 - 50}],
+    transform: [{translateY: -WIDTH / 2 - 15}],
   },
   counter: {
     marginHorizontal: 15,
@@ -264,6 +374,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   boardContainer: {
+    position: 'absolute',
+    justifyContent: 'flex-end',
     marginHorizontal: 20,
     alignItems: 'center',
   },
@@ -278,9 +390,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  gestureContainer: {
+    position: 'absolute',
+    width: '100%',
+    backgroundColor: 'green',
+  },
   horse: {
-    width: '80%',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    // width: '80%',
     resizeMode: 'contain',
+    zIndex: 2,
   },
   available: {
     position: 'absolute',
@@ -291,6 +412,7 @@ const styles = StyleSheet.create({
   },
   isUsed: {
     ...StyleSheet.absoluteFillObject,
+    opacity: 0.8,
     // backgroundColor: 'purple',
   },
 });
