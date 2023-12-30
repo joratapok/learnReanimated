@@ -65,6 +65,19 @@ export const findCoordSquare = (
   return {x, y};
 };
 
+export const findIndexSquare = (
+  widthBoard: number,
+  boardSize: number,
+  x: number,
+  y: number,
+): number => {
+  'worklet';
+  const squareWidth = widthBoard / boardSize;
+  const horizontal = Math.floor(x / squareWidth);
+  const vertical = boardSize + Math.floor(y / squareWidth);
+  return vertical * boardSize + horizontal;
+};
+
 export const checkIsAvailableTap = ({
   tap,
   fieldWidth,

@@ -13,5 +13,7 @@ export * from './ClockPreloader';
 export * from './HorseMystery';
 export * from './SVGAnimation';
 export * from './Counter';
+export * from './Sorting';
+export * from './NativeModule';
 
 // export {PanGesture};

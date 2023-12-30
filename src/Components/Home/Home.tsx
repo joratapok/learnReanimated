@@ -1,9 +1,9 @@
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {AnimateScreens} from 'types/navigations';
+import {NavigationProp} from '@react-navigation/native';
 
-export const Home = ({navigation}: NativeStackScreenProps<AnimateScreens>) => {
+export const Home = ({navigation}: {navigation: NavigationProp<any>}) => {
   const goToScreen = (screenName: keyof AnimateScreens) => {
     navigation.navigate(screenName);
   };
@@ -48,6 +48,12 @@ export const Home = ({navigation}: NativeStackScreenProps<AnimateScreens>) => {
       <TouchableOpacity onPress={() => goToScreen('Counter')}>
         <Text style={styles.text}>Counter Screen</Text>
       </TouchableOpacity>
+      {/*<TouchableOpacity onPress={() => goToScreen('Sorting')}>*/}
+      {/*  <Text style={styles.text}>Sorting</Text>*/}
+      {/*</TouchableOpacity>*/}
+      <TouchableOpacity onPress={() => goToScreen('NativeModule')}>
+        <Text style={styles.text}>Morse with flashlight</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -57,9 +63,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'pink',
+    backgroundColor: 'lightblue',
   },
   text: {
+    marginBottom: 10,
     fontSize: 16,
     fontWeight: '700',
   },

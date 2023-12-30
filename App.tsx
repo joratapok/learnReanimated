@@ -18,6 +18,8 @@ import {
   HorseMystery,
   SVGAnimation,
   Counter,
+  Sorting,
+  NativeModule,
 } from 'animationScreens';
 import {Home} from 'home';
 import {AnimateScreens} from 'types/navigations';
@@ -25,7 +27,7 @@ import {AnimateScreens} from 'types/navigations';
 const Stack = createNativeStackNavigator<AnimateScreens>();
 
 const App = () => {
-  const isDarkMode = useColorScheme() === 'dark';
+  const isDarkMode = useColorScheme() === 'light';
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
@@ -52,9 +54,15 @@ const App = () => {
           <Stack.Screen name={'RippleEffect'} component={RippleEffect} />
           <Stack.Screen name={'Perspective'} component={Perspective} />
           <Stack.Screen name={'ClockPreloader'} component={ClockPreloader} />
-          <Stack.Screen name={'HorseMystery'} component={HorseMystery} />
+          <Stack.Screen
+            name={'HorseMystery'}
+            component={HorseMystery}
+            options={{orientation: 'portrait_up'}}
+          />
           <Stack.Screen name={'SVGAnimation'} component={SVGAnimation} />
           <Stack.Screen name={'Counter'} component={Counter} />
+          {/*<Stack.Screen name={'Sorting'} component={Sorting} />*/}
+          <Stack.Screen name={'NativeModule'} component={NativeModule} />
         </Stack.Navigator>
       </NavigationContainer>
     </GestureHandlerRootView>

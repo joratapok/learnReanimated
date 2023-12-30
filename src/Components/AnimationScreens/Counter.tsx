@@ -6,7 +6,6 @@ import Animated, {
   useAnimatedGestureHandler,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -36,30 +35,26 @@ export const Counter = () => {
     setCounter(0);
   }, []);
   const manualIncrement = () => {
-    translateX.value = withRepeat(
-      withTiming(MAX_OFFSET, {duration: 300}),
-      2,
-      true,
-    );
-    setTimeout(() => increment(), 300);
+    translateX.value = withTiming(MAX_OFFSET, {duration: 200}, () => {
+      translateX.value = withTiming(0, {duration: 200});
+    });
+    setTimeout(() => increment(), 200);
   };
   const manualDecrement = () => {
-    translateX.value = withRepeat(
-      withTiming(-MAX_OFFSET, {duration: 300}),
-      2,
-      true,
-    );
-    setTimeout(() => dencrement(), 300);
+    translateX.value = withTiming(-MAX_OFFSET, {duration: 200}, () => {
+      translateX.value = withTiming(0, {duration: 200});
+    });
+    setTimeout(() => dencrement(), 200);
   };
   const gestureHandler =
     useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
       onActive: event => {
         translateX.value = clamp(event.translationX, -MAX_OFFSET, MAX_OFFSET);
-        translateY.value = clamp(event.translationY, 0, MAX_OFFSET);
+        // translateY.value = clamp(event.translationY, 0, MAX_OFFSET);
       },
       onEnd: () => {
         translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
+        // translateY.value = withSpring(0);
         if (translateX.value === MAX_OFFSET) {
           runOnJS(increment)();
         } else if (translateX.value === -MAX_OFFSET) {

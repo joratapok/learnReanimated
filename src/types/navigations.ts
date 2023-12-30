@@ -13,4 +13,6 @@ export type AnimateScreens = {
   HorseMystery: undefined;
   SVGAnimation: undefined;
   Counter: undefined;
+  Sorting: undefined;
+  NativeModule: undefined;
 };

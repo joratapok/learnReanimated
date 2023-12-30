@@ -2,7 +2,6 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {
   Alert,
   Dimensions,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import {
 import Animated, {
   Easing,
   interpolateColor,
+  runOnJS,
   useAnimatedGestureHandler,
   useAnimatedStyle,
   useDerivedValue,
@@ -24,6 +24,7 @@ import {
   checkIsAvailableTap,
   findAvailableFields,
   findCoordSquare,
+  findIndexSquare,
 } from 'helpers';
 import {
   PanGestureHandler,
@@ -175,6 +176,7 @@ export const HorseMystery = () => {
   const counter = currentState.filter(el => el === 'isUsed').length + 1;
   const horseX = useSharedValue(0);
   const horseY = useSharedValue(0);
+  const scale = useSharedValue(1);
 
   const setup = useCallback(() => {
     setCurrentState(initialState);
@@ -221,6 +223,8 @@ export const HorseMystery = () => {
     onStart: (event, context) => {
       context.x = horseX.value;
       context.y = horseY.value;
+      const config = {duration: 100};
+      scale.value = withTiming(1.7, config);
     },
     onActive: (event, context) => {
       horseX.value = event.translationX + context.x;
@@ -238,9 +242,7 @@ export const HorseMystery = () => {
         horseY.value = withTiming(context.y);
         return;
       }
-      if (
-        !checkIsAvailableTap({tap, fieldWidth: SQUARE_WIDTH, coordinates})
-      ) {
+      if (!checkIsAvailableTap({tap, fieldWidth: SQUARE_WIDTH, coordinates})) {
         horseX.value = withTiming(context.x);
         horseY.value = withTiming(context.y);
         return;
@@ -252,12 +254,23 @@ export const HorseMystery = () => {
       const config = {duration: 100};
       horseX.value = withTiming(x - compensationX, config);
       horseY.value = withTiming(y - compensationY, config);
+      const currentIndex = findIndexSquare(BOARD_WIDTH, sizeField, x, y);
+      runOnJS(moveHorse)(currentIndex);
+      // moveHorse(findIndexSquare(BOARD_WIDTH, sizeField, x, y));
+    },
+    onFinish: () => {
+      const config = {duration: 100};
+      scale.value = withTiming(1, config);
     },
   });
 
   const rHorse = useAnimatedStyle(() => {
     return {
-      transform: [{translateX: horseX.value}, {translateY: horseY.value}],
+      transform: [
+        {translateX: horseX.value},
+        {translateY: horseY.value},
+        {scale: scale.value},
+      ],
     };
   }, []);
 
